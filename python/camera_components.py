@@ -231,7 +231,7 @@ class Raft(object):
     def sensor_names(self):
         """ The names of the sensors in this raft, sorted to match the
         slot names """
-        return [self.__sensor_dict[slot].sensor_id for slot in self.slot_names][:1]
+        return [self.__sensor_dict[slot].sensor_id for slot in self.slot_names]
 
     def items(self):
         """ Iterator over slot_name, sensor_name pairs """
