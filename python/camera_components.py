@@ -9,8 +9,8 @@ import siteUtils
 
 __all__ = ['Raft', 'Sensor']
 
-# Configure the database interface
-ROOT_FOLDER = 'LSST/mirror/SLAC-prod/prod'
+ROOT_FOLDER = os.environ.get('LCATR_DATACATALOG_FOLDER',
+                             'LSST/mirror/SLAC-prod/prod')
 USER = os.environ['USER']
 
 def parse_etraveler_response(rsp, validate):
