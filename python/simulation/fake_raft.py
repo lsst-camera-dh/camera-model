@@ -514,11 +514,7 @@ class RaftImages(object):
             Name of the sensor, e.g., 'E2V-CCD250-104'
 
         Keyword arguments
-        -----------
-        raft_id : str
-            Override the raft id
-        process_name_out : str
-            The name of the output eTraveler process, if it differs from process_name
+        -----------------
         clobber : bool, optional
             Flag indicating whether to overwrite an existing output file
         dry_run : bool, optional
