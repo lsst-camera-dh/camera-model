@@ -221,20 +221,17 @@ class RaftImages(object):
         """
         print ("Placeholder", self.raft_id, slot_name, hdu)
 
-    def update_image_header(self, slot_name, ext_num, hdu):
+    def update_image_header(self, slot_name, hdu):
         """
         Update the image header for one of the readout segments.  Adds raft-level
         coordinates (one set in Camera coordinates and one set rotated so the CCD
-        orientation has serial direction horizontal).  Adds rotated CCD coordinates
-        as well.  (Also rewrites amplifier and CCD-level Mosaic keywords.)
-        See LCA-13501
+        orientation has serial direction horizontal).  Adds amplifier and rotated
+        CCD coordinates as well.  See LCA-13501.
 
         Parameters
         ----------
         slot_name : str
             Name of the slot within the raft
-        ext_num:  int
-            Number of the HDU extension for this segment
         hdu : fits.Image
             FITS image whose header is being updated
         """
@@ -553,7 +550,7 @@ class RaftImages(object):
         self.update_primary_header(slot_name, output[0])
 
         for ext_num in range(1, 16):
-            self.update_image_header(slot_name, ext_num, output[ext_num])
+            self.update_image_header(slot_name, output[ext_num])
 
 
         output.writeto(outfilename, clobber=clobber)
