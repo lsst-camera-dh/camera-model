@@ -218,7 +218,7 @@ class RaftImages(object):
         hdu : fits.Image
             FITS image whose header is being updated
         """
-        print ("Placeholder", self.raft_id, slot_name, hdu)
+        pass
 
     def update_image_header(self, slot_name, hdu):
         """
