@@ -21,9 +21,8 @@ from datacat.error import DcClientException
 from DataCatalog import DataCatalog
 import camera_components
 
-# Configure the database interface
-ROOT_FOLDER = 'LSST/mirror/SLAC-prod/prod'
-
+# Set the Data Catalog folder.
+ROOT_FOLDER = camera_components.ROOT_FOLDER
 
 def make_datacat_path(**kwargs):
     """ Build the data catalog path for a particular test on a particular sensor
@@ -626,9 +625,11 @@ if __name__ == '__main__':
     OUTPATH = '.'
     RAFT_ID = 'LCA-10753-RSA_sim-0000'
 
-    #RAFT = FakeRaft.create_from_yaml("test_raft.yaml")
-    RAFT = FakeRaft.create_from_etrav(RAFT_ID, user=USER, db_name=ETRAV_DB)
+    #RAFT = camera_components.Raft.create_from_yaml("test_raft.yaml")
+    RAFT = camera_components.Raft.create_from_etrav(RAFT_ID, user=USER,
+                                                    db_name=ETRAV_DB)
 
-    RAFT.file_copy(PROCESS_NAME_IN, OUTPATH, root_folder=ROOT_FOLDER, dry_run=True,
-                   test_type=TESTTYPE, image_type=IMGTYPE,
-                   pattern=PATTERN)
+    copy_single_sensor_data(RAFT, PROCESS_NAME_IN, OUTPATH,
+                            root_folder=ROOT_FOLDER, dry_run=True,
+                            test_type=TESTTYPE, image_type=IMGTYPE,
+                            pattern=PATTERN)

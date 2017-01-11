@@ -7,7 +7,7 @@ import yaml
 import eTraveler.clientAPI.connection
 import siteUtils
 
-__all__ = ['Raft', 'Sensor']
+__all__ = ['Raft', 'Sensor', 'ROOT_FOLDER']
 
 ROOT_FOLDER = os.environ.get('LCATR_DATACATALOG_FOLDER',
                              'LSST/mirror/SLAC-prod/prod')
@@ -83,7 +83,7 @@ class Sensor(object):
 
     @property
     def raft_id(self):
-        """ Return the Name of the sensor, e.g., 'RAFT-000' """
+        """ Return the name of the raft, e.g., 'RAFT-000' """
         return self.__raft_id
 
 
