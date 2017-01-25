@@ -13,7 +13,9 @@ from __future__ import print_function, absolute_import, division
 import sys
 import os
 import fnmatch
+import glob
 
+import numpy as np
 import astropy.io.fits as fits
 
 import siteUtils
@@ -168,6 +170,34 @@ def get_template_files(root_folder, sensor_type, sensor_id, process_name, **kwar
     return file_list
 
 
+def get_crosstalk_files(root_folder, sensor_id):
+    """ Get files that serve as templates for a particular process_type
+
+    Parameters
+    ----------
+    root_folder : str
+        Top level data catalog folder for search
+    sensor_id : str
+        Name of the sensor, e.g., 'E2V-CCD250-104'
+
+    Returns (spot_files, dark_files)
+    ----------
+    spot_files : list
+        List of files from spot exposures for this sensor
+
+    dark_files : list
+        List of files from darks for this sensor
+    """
+    folder = os.path.join(root_folder, sensor_id.replace('-', '_'), 'spot')
+    globstring_spot = '%s/*/%s_spot_spot_multi*.fits'%(folder, sensor_id.replace('-', '_'))
+    globstring_dark = '%s/*/%s_dark_dark*.fits'%(folder, sensor_id.replace('-', '_'))
+
+    spot_files = glob.glob(globstring_spot)
+    dark_files = glob.glob(globstring_dark)
+
+    return (spot_files, dark_files)
+
+
 class RaftImages(object):
     '''
     Writes a raft's worth of images based on a user-supplied single-sensor
@@ -207,7 +237,8 @@ class RaftImages(object):
         except OSError:
             pass
 
-    def update_primary_header(self, slot_name, hdu):
+    @staticmethod
+    def update_primary_header(slot_name, hdu):
         """
         Update the primary header
 
@@ -220,7 +251,8 @@ class RaftImages(object):
         """
         pass
 
-    def update_image_header(self, slot_name, hdu):
+    @staticmethod
+    def update_image_header(slot_name, hdu):
         """
         Update the image header for one of the readout segments.  Adds raft-level
         coordinates (one set in Camera coordinates and one set rotated so the CCD
@@ -351,8 +383,8 @@ class RaftImages(object):
             cdelt2q = 1
             crpix1q = 0
             crpix2q = 0
-            crval1q = (gap_outy + (ccdpy - ccday)/2. + cs*(8*dimh + gap_iny
-                       + ccdpy - ccday) + (ss + 1)*dimh + 1 - preh)
+            crval1q = (gap_outy + (ccdpy - ccday)/2. +\
+                           cs*(8*dimh + gap_iny + ccdpy - ccday) + (ss + 1)*dimh + 1 - preh)
             crval2q = (sp*(2*dimv + 1) + gap_outx + (ccdpx - ccdax)/2.
                        + cp*(2*dimv + gap_inx + ccdpx - ccdax))
             dtm1_1 = -1
@@ -387,11 +419,11 @@ class RaftImages(object):
             cdelt2r = 1
             crpix1r = 0
             crpix2r = 0
-            crval1r = (sx*(2*dimv + 1) + gap_outx + (ccdpx - ccdax)/2.
-                       + cx*(2*dimv + gap_inx + ccdpx - ccdax))
-            crval2r = (sx*(dimh + 1) + sy*dimh + gap_outy
-                       + (ccdpy - ccday)/2. + cy*(8*dimh + gap_iny + ccdpy
-                       - ccday) + (2*sx - 1)*preh)
+            crval1r = (sx*(2*dimv + 1) + gap_outx + (ccdpx - ccdax)/2. +\
+                           cx*(2*dimv + gap_inx + ccdpx - ccdax))
+            crval2r = (sx*(dimh + 1) + sy*dimh + gap_outy +\
+                           (ccdpy - ccday)/2. +\
+                       cy*(8*dimh + gap_iny + ccdpy - ccday) + (2*sx - 1)*preh)
             pc1_1b = 1 - 2*sp
             pc1_2b = 0
             pc2_1b = 0
@@ -410,11 +442,11 @@ class RaftImages(object):
             cdelt2q = 1
             crpix1q = 0
             crpix2q = 0
-            crval1q = (gap_outy + (ccdpy - ccday)/2. + cs*(8*dimh + gap_iny
-                       + ccdpy - ccday) + sp*(dimh + 1) + ss*dimh) + (2*sp
-                       - 1)*preh
-            crval2q = (sp*(2*dimv + 1) + gap_outx + (ccdpx - ccdax)/2.
-                       + cp*(2*dimv + gap_inx + ccdpx - ccdax))
+            crval1q = (gap_outy + (ccdpy - ccday)/2. +\
+                       cs*(8*dimh + gap_iny + ccdpy - ccday) +\
+                           sp*(dimh + 1) + ss*dimh) + (2*sp - 1)*preh
+            crval2q = (sp*(2*dimv + 1) + gap_outx + (ccdpx - ccdax)/2. +\
+                           cp*(2*dimv + gap_inx + ccdpx - ccdax))
             dtm1_1 = 1 - 2*sx
             dtm1_2 = 0
             dtm2_1 = 0
@@ -519,13 +551,22 @@ class RaftImages(object):
             Flag indicating whether to overwrite an existing output file
         dry_run : bool, optional
             If true, just print output file names, but do not copy files
+        job_id : str, optional
+            Used to construct the output file name.  Defaults to siteUtils.getJobName()
+        frame_suffix : str, optional
+            Used in case we are making multiple frames for the same input.
+            Defaults to None
         """
         file_suffix = get_file_suffix(single_sensor_file)
 
         clobber = kwargs.get('clobber', True)
         dry_run = kwargs.get('dry_run', False)
         job_id = kwargs.get('job_id', siteUtils.getJobName())
-        basename = "%s%s" % (sensor_id, file_suffix)
+        frame_suffix = kwargs.get('frame_suffix', None)
+        if frame_suffix is None:
+            basename = "%s%s" % (sensor_id, file_suffix)
+        else:
+            basename = "%s%s%s" % (sensor_id, frame_suffix, file_suffix)
         outfilename = make_outfile_path(outpath=self.output_path,
                                         slot_name=slot_name,
                                         file_string=basename,
@@ -536,30 +577,248 @@ class RaftImages(object):
         except OSError:
             pass
 
-        print ("  Outfile = %s" % outfilename)
         if dry_run:
             os.system("touch %s"% outfilename)
             return
         output = fits.open(single_sensor_file)
 
-        self.update_primary_header(slot_name, output[0])
+        RaftImages.update_primary_header(slot_name, output[0])
 
         for ext_num in range(1, 16):
-            self.update_image_header(slot_name, output[ext_num])
+            RaftImages.update_image_header(slot_name, output[ext_num])
 
 
         output.writeto(outfilename, clobber=clobber)
         output.close()
 
+    def write_xtalk_sensor_dark(self,
+                                single_sensor_file,
+                                victim_slot_name,
+                                aggresor_slot_name,
+                                sensor_id,
+                                **kwargs):
+        """
+        Write a FITS image with pixel coordinates matching the specified
+        sensor_id and raft_id emulating a dark from a crosstalk test.
+        The output file name is constructed from the test type, sensor type, sensor_id,
+        raft_id and aggresor_slot_names.
+
+        Parameters
+        ----------
+        single_sensor_file : str
+            Name of the file to be copied
+        victim_slot_name:  str
+            Name of the slot this sensor occupies
+        aggresor_slot_name:  str
+            Name of the slot this sensor occupies
+        sensor_id:  str
+            Name of the sensor, e.g., 'E2V-CCD250-104'
+
+        Keyword arguments
+        -----------------
+        clobber : bool, optional
+            Flag indicating whether to overwrite an existing output file
+        dry_run : bool, optional
+            If true, just print output file names, but do not copy files
+        job_id : str, optional
+            Used to construct the output file name.  Defaults to siteUtils.getJobName()
+        """
+        self.write_sensor_image(single_sensor_file,
+                                slot_name=victim_slot_name,
+                                sensor_id=sensor_id,
+                                frame_suffix="_%s"%(aggresor_slot_name),
+                                **kwargs)
+
+    def copy_aggressor_spot(self,
+                            single_sensor_file,
+                            victim_slot_name,
+                            aggresor_slot_name,
+                            sensor_id,
+                            **kwargs):
+        """
+        Write a FITS image with pixel coordinates matching the specified
+        sensor_id and raft_id emulating a multiaggressor spot from a crosstalk test.
+        The output file name is constructed from the test type, sensor type, sensor_id,
+        raft_id and aggresor_slot_names.
+
+        Parameters
+        ----------
+        single_sensor_file : str
+            Name of the file to be copied
+        victim_slot_name:  str
+            Name of the slot this sensor occupies
+        aggresor_slot_name:  str
+            Name of the slot this sensor occupies
+        sensor_id:  str
+            Name of the sensor, e.g., 'E2V-CCD250-104'
+
+        Keyword arguments
+        -----------------
+        clobber : bool, optional
+            Flag indicating whether to overwrite an existing output file
+        dry_run : bool, optional
+            If true, just print output file names, but do not copy files
+        job_id : str, optional
+            Used to construct the output file name.  Defaults to siteUtils.getJobName()
+        """
+        self.write_sensor_image(single_sensor_file,
+                                slot_name=victim_slot_name,
+                                sensor_id=sensor_id,
+                                frame_suffix="_%s"%(aggresor_slot_name),
+                                **kwargs)
+
+    def make_victim_sensor_image(self,
+                                 aggressor_spot_file,
+                                 aggressor_dark_file,
+                                 victim_dark_file,
+                                 crosstalk,
+                                 victim_slot_name,
+                                 aggresor_slot_name,
+                                 sensor_id,
+                                 **kwargs):
+        """
+        Write a FITS image with pixel coordinates matching the specified
+        sensor_id and raft_id emulating a victim sensor from a crosstalk test.
+        The output file name is constructed from the test type, sensor type, sensor_id,
+        raft_id and aggresor_slot_names.
+
+        The output image is: crosstalk * (aggressor_spot - aggressor_dark ) +  victim_dark
+
+        Parameters
+        ----------
+        aggressor_spot_file : str
+            Name of the file with the spot data for the aggressor sensor
+        aggressor_dark_file : str
+            Name of the file with the dark data for the aggressor sensor
+        victim_dark_file : str
+            Name of the file with the dark data for the victim sensor
+        crosstalk : float
+            Crosstalk value.
+        victim_slot_name:  str
+            Name of the slot this sensor occupies
+        aggresor_slot_name:  str
+            Name of the slot this sensor occupies
+        sensor_id:  str
+            Name of the sensor, e.g., 'E2V-CCD250-104'
+
+        Keyword arguments
+        -----------------
+        clobber : bool, optional
+            Flag indicating whether to overwrite an existing output file
+        dry_run : bool, optional
+            If true, just print output file names, but do not copy files
+        job_id : str, optional
+            Used to construct the output file name.  Defaults to siteUtils.getJobName()
+        """
+        file_suffix = get_file_suffix(victim_dark_file).replace('sim_dark_dark',
+                                                                'sim_spot_spot_multi')
+
+        clobber = kwargs.get('clobber', True)
+        dry_run = kwargs.get('dry_run', False)
+        job_id = kwargs.get('job_id', siteUtils.getJobName())
+        basename = "%s_%s%s" % (sensor_id, aggresor_slot_name, file_suffix)
+
+        outfilename = make_outfile_path(outpath=self.output_path,
+                                        slot_name=victim_slot_name,
+                                        file_string=basename,
+                                        job_id=job_id)
+        outdir = os.path.dirname(outfilename)
+        try:
+            os.makedirs(outdir)
+        except OSError:
+            pass
+        if dry_run:
+            os.system("touch %s"% outfilename)
+            return
+
+        aggressor_spot = fits.open(aggressor_spot_file)
+        aggressor_dark = fits.open(aggressor_dark_file)
+        victim_dark = fits.open(victim_dark_file)
+
+        output = aggressor_spot
+        for amp in range(1, 17):
+            victimimage = aggressor_spot[amp].data.astype(float)
+            victimimage -= aggressor_dark[amp].data
+            victimimage *= crosstalk
+            victimimage += victim_dark[amp].data
+            output[amp].data = victimimage.astype(int)
+
+        RaftImages.update_primary_header(victim_slot_name, output[0])
+
+        for ext_num in range(1, 17):
+            RaftImages.update_image_header(victim_slot_name, output[ext_num])
+
+        output.writeto(outfilename, clobber=clobber)
+        output.close()
+
+
+    def make_victim_raft_images(self,
+                                aggressor_spot_files,
+                                dark_files,
+                                crosstalk_matrix,
+                                raft,
+                                **kwargs):
+        """
+        Write rafts worth of FITS images emulating a crosstalk test.
+
+        This will loop over the input file, and either copy or combine them to
+        emulate the crosstalk data aquisition.
+
+        Parameters
+        ----------
+        aggressor_spot_files : list of str
+            Names of the files with the aggressor spot data for the sensor
+        dark_file : list of str
+            Names of the files with the dark data for the sensors
+        crosstalk_matrix : np.ndarray(9,9)
+            Matrix of inter-sensor crosstalk values, expressed as a
+            fraction of the intra-sensor values
+        raft : `camera_components.raft` object
+            Object that encapsulates the raft-to-sensor relationships
+        """
+        slot_names = raft.slot_names
+        for i_agg, (aggressor_spot_file, aggressor_slot_name, aggressor_dark_file)\
+                in enumerate(zip(aggressor_spot_files, slot_names, dark_files)):
+            sys.stdout.write("Working on aggressor %s: "%slot_names[i_agg])
+            sys.stdout.flush()
+            for i_vic, (victim_dark_file, victim_slot_name, sensor_id)\
+                    in enumerate(zip(dark_files, slot_names, raft.sensor_names)):
+                sys.stdout.write('.')
+                sys.stdout.flush()
+                crosstalk_value = crosstalk_matrix[i_agg, i_vic]
+                self.write_xtalk_sensor_dark(victim_dark_file,
+                                             victim_slot_name,
+                                             aggressor_slot_name,
+                                             sensor_id,
+                                             **kwargs)
+                if i_agg == i_vic:
+                    self.copy_aggressor_spot(aggressor_spot_file,
+                                             victim_slot_name,
+                                             aggressor_slot_name,
+                                             sensor_id,
+                                             **kwargs)
+                else:
+                    self.make_victim_sensor_image(aggressor_spot_file,
+                                                  aggressor_dark_file,
+                                                  victim_dark_file,
+                                                  crosstalk_value,
+                                                  victim_slot_name,
+                                                  aggressor_slot_name,
+                                                  sensor_id,
+                                                  **kwargs)
+
+            sys.stdout.write('!\n')
+
 
 def copy_single_sensor_data(raft, process_name, output_path, **kwargs):
-
     """ Copy a single input file to the correct output location for
         each sensor in this raft.  Possibly updating FITS header
         infomation along the way.
 
     Parameters
     ----------
+    raft : `camera_components.raft` object
+        Object that encapsulates the raft-to-sensor relationships
     process_name : str
         The name of the assoicated eTraveler process, used in making
         the output file name
@@ -607,6 +866,57 @@ def copy_single_sensor_data(raft, process_name, output_path, **kwargs):
                                       **kwargs_write)
 
 
+def simulate_crosstalk_data(raft, output_path, crosstalk_matrix, **kwargs):
+    """ Simulate the data from a raft-level crosstalk test.
+    This takes simulated sensor-level crosstalk data as inputs.
+
+    Parameters
+    ----------
+    raft : `camera_components.raft` object
+        Object that encapsulates the raft-to-sensor relationships
+    output_path : str
+        The prefix for the output file paths
+
+    Keyword Arguments
+    ----------
+    root_folder : str, defaults to 'LSST/mirror/BNL-prod/prod
+        Allow overriding the top-level folder for the template file search
+    clobber : bool, optional
+        Allow overwriting existing files
+    dry_run : bool, optional
+        If true, just print output file names, but do not copy files
+    """
+
+    kwargs = kwargs.copy()
+    root_folder = kwargs.pop('root_folder', ROOT_FOLDER)
+    kwargs_write = dict(clobber=kwargs.pop('clobber', False),
+                        dry_run=kwargs.pop('dry_run', False),
+                        process_name_out='crosstalk')
+
+    writer = RaftImages(raft.raft_id, 'crosstalk', raft.sensor_type,
+                        output_path)
+
+    spotfiles = []
+    darkfiles = []
+    use_db = False
+
+    for sensor_id in raft.sensor_names:
+        if use_db:
+            template_files_spot = get_template_files(root_folder, raft.sensor_type,
+                                                     sensor_id=sensor_id.replace('_sim', ''),
+                                                     process_name='spot', **kwargs)
+            template_files_dark = get_template_files(root_folder, raft.sensor_type,
+                                                     sensor_id=sensor_id.replace('_sim', ''),
+                                                     process_name='dark', **kwargs)
+        else:
+            template_files_spot, template_files_dark = get_crosstalk_files('sensorData', sensor_id)
+        spotfiles.append(template_files_spot[-1])
+        darkfiles.append(template_files_dark[-1])
+
+    writer.make_victim_raft_images(spotfiles, darkfiles, crosstalk_matrix, raft, **kwargs_write)
+
+
+
 if __name__ == '__main__':
 
     USER = os.environ['USER']
@@ -618,14 +928,25 @@ if __name__ == '__main__':
     PROCESS_NAME_IN = 'vendorIngest'
     PROCESS_NAME_OUT = 'fe55_acq'
     PATTERN = '*.fits'
-    OUTPATH = '.'
+    OUTPATH = 'sensorData/raft_xtalk'
     RAFT_ID = 'LCA-10753-RSA_sim-0000'
 
-    #RAFT = camera_components.Raft.create_from_yaml("test_raft.yaml")
-    RAFT = camera_components.Raft.create_from_etrav(RAFT_ID, user=USER,
-                                                    db_name=ETRAV_DB)
+    RAFT = camera_components.Raft.create_from_yaml("test_raft.yaml")
+    #RAFT = camera_components.Raft.create_from_etrav(RAFT_ID, user=USER,
+    #                                                db_name=ETRAV_DB)
 
-    copy_single_sensor_data(RAFT, PROCESS_NAME_IN, OUTPATH,
-                            root_folder=ROOT_FOLDER, dry_run=True,
-                            test_type=TESTTYPE, image_type=IMGTYPE,
-                            pattern=PATTERN)
+    CROSSTALK = 0.1
+    CROSSTALK_MATRIX = np.ones((9, 9), float)
+    CROSSTALK_MATRIX *= CROSSTALK
+    for i in range(9):
+        CROSSTALK_MATRIX[i, i] = 1.0
+
+    os.environ['LCATR_JOB'] = '00000'
+
+    #copy_single_sensor_data(RAFT, PROCESS_NAME_IN, OUTPATH,
+    #                        root_folder=ROOT_FOLDER, dry_run=True,
+    #                        test_type=TESTTYPE, image_type=IMGTYPE,
+    #                        pattern=PATTERN)
+
+    simulate_crosstalk_data(RAFT, OUTPATH, CROSSTALK_MATRIX,
+                            root_folder=ROOT_FOLDER, dry_run=True)
