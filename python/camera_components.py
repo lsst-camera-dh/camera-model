@@ -189,17 +189,16 @@ class Raft(object):
                                               noBatched=no_batched)
         sensor_dict = {}
 
+        ccd_types = ['e2v-CCD', 'ITL-CCD']
+
         validate_dict = dict(parent_hardwareTypeName=htype,
                              parent_experimentSN=raft_id,
-                             child_hardwareTypeName=['e2v-CCD', 'ITL-CCD'])
+                             child_hardwareTypeName=ccd_types)
 
         sensor_type = None
 
-        rel_types = ['RSA_contains_E2V-CCD_sim',
-                     'RSA_contains_ITL-CCD_sim']
-
         for rsp_item in rsp:
-            if rsp_item['relationshipTypeName'] in rel_types:
+            if rsp_item['child_hardwareTypeName'] in ccd_types:
                 slot, c_esn = parse_etraveler_response(rsp_item, validate_dict)
                 sensor_dict[str(slot)] = Sensor(c_esn, raft_id)
                 # For science rafts at least all the sensors in a raft
