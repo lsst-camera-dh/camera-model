@@ -191,9 +191,7 @@ class Raft(object):
 
         ccd_types = ['e2v-CCD', 'ITL-CCD']
 
-        validate_dict = dict(parent_hardwareTypeName=htype,
-                             parent_experimentSN=raft_id,
-                             child_hardwareTypeName=ccd_types)
+        validate_dict = dict(child_hardwareTypeName=ccd_types)
 
         sensor_type = None
 
