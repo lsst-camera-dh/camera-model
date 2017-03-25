@@ -154,7 +154,7 @@ class Raft(object):
         htype = kwargs.get('htype', siteUtils.getUnitType())
         no_batched = kwargs.get('no_batched', 'false')
         if db_name is None:
-            db_name = os.path.split(os.environ['LCATR_LIMS_URL'][-1])
+            db_name = os.path.split(os.environ['LCATR_LIMS_URL'])[-1]
             if db_name not in 'Prod Dev Test Raw'.split():
                 # This case occurs when using the fake_eT server.
                 db_name = 'Dev'
