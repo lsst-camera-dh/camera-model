@@ -26,20 +26,36 @@ class CameraComponentsTestCase(unittest.TestCase):
         htype = 'LCA-11021_RTM'
         noBatched = 'false'
 
-        camera_components.Raft.create_from_etrav(raft_id, user=user,
-                                                 db_name=db_name,
-                                                 prodServer=prodServer,
-                                                 htype=htype,
-                                                 noBatched=noBatched)
+        raft = camera_components.Raft.create_from_etrav(raft_id, user=user,
+                                                        db_name=db_name,
+                                                        prodServer=prodServer,
+                                                        htype=htype,
+                                                        noBatched=noBatched)
+
+        sensor = raft.sensor('S00')
+        self.assertEqual(sensor.sensor_id, 'ITL-3800C-145')
+        self.assertEqual(sensor.manufacturer_sn, '20429')
+
+        sensor = raft.sensor('S21')
+        self.assertEqual(sensor.sensor_id, 'ITL-3800C-146')
+        self.assertEqual(sensor.manufacturer_sn, '20263')
+
         # Also test using Dev tables.
         os.environ['LCATR_LIMS_URL'] = 'http://lsst-camera.slac.stanford.edu:80/eTraveler/Dev'
         raft_id = 'LCA-11021_RTM-004_ETU2-Dev'
-        camera_components.Raft.create_from_etrav(raft_id, user=user,
-                                                 db_name=db_name,
-                                                 prodServer=prodServer,
-                                                 htype=htype,
-                                                 noBatched=noBatched)
+        raft = camera_components.Raft.create_from_etrav(raft_id, user=user,
+                                                        db_name=db_name,
+                                                        prodServer=prodServer,
+                                                        htype=htype,
+                                                        noBatched=noBatched)
 
+        sensor = raft.sensor('S11')
+        self.assertEqual(sensor.sensor_id, 'ITL-3800C-017-Dev')
+        self.assertEqual(sensor.manufacturer_sn, '20459')
+
+        sensor = raft.sensor('S22')
+        self.assertEqual(sensor.sensor_id, 'ITL-3800C-103-Dev')
+        self.assertEqual(sensor.manufacturer_sn, '20261')
 
 if __name__ == '__main__':
     unittest.main()
