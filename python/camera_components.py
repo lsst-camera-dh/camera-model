@@ -25,7 +25,7 @@ def parse_etraveler_response(rsp, validate):
         particular hardware element.
     validate : dict
         A validation dictionary, which contains the expected values
-        for some par ts of the rsp.  This is here for sanity checking,
+        for some parts of the rsp.  This is here for sanity checking,
         for example requiring that the parent element matches the
         input element to the request.
 
@@ -68,13 +68,16 @@ class Sensor(object):
         Name of the sensor, e.g., 'E2V-CCD250-104'
     raft_id : str
         Name of the associated raft
+    manufacturer_sn : str
+        Manufacturer's serial number.
     '''
-    def __init__(self, sensor_id, raft_id):
+    def __init__(self, sensor_id, raft_id, manufacturer_sn):
         """
         Class constructor.
         """
         self.__sensor_id = str(sensor_id)
         self.__raft_id = str(raft_id)
+        self._manufacturer_sn = manufacturer_sn
 
     @property
     def sensor_id(self):
@@ -85,6 +88,11 @@ class Sensor(object):
     def raft_id(self):
         """ Return the name of the raft, e.g., 'RAFT-000' """
         return self.__raft_id
+
+    @property
+    def manufacturer_sn(self):
+        "The manufacturer's serial number."
+        return self._manufacturer_sn
 
 
 class Raft(object):
@@ -154,7 +162,7 @@ class Raft(object):
         htype = kwargs.get('htype', siteUtils.getUnitType())
         no_batched = kwargs.get('no_batched', 'false')
         if db_name is None:
-            db_name = os.path.split(os.environ['LCATR_LIMS_URL'][-1])
+            db_name = os.path.split(os.environ['LCATR_LIMS_URL'])[-1]
             if db_name not in 'Prod Dev Test Raw'.split():
                 # This case occurs when using the fake_eT server.
                 db_name = 'Dev'
@@ -189,24 +197,20 @@ class Raft(object):
                                               noBatched=no_batched)
         sensor_dict = {}
 
-        validate_dict = dict(parent_hardwareTypeName=htype,
-                             parent_experimentSN=raft_id,
-                             child_hardwareTypeName=['e2v-CCD', 'ITL-CCD'])
+        ccd_types = ['e2v-CCD', 'ITL-CCD']
+
+        validate_dict = dict(child_hardwareTypeName=ccd_types)
 
         sensor_type = None
 
-        rel_types = ['RSA_contains_E2V-CCD_sim',
-                     'RSA_contains_ITL-CCD_sim']
-
         for rsp_item in rsp:
-            if rsp_item['relationshipTypeName'] in rel_types:
-                slot, c_esn = parse_etraveler_response(rsp_item, validate_dict)
-                sensor_dict[str(slot)] = Sensor(c_esn, raft_id)
-                # For science rafts at least all the sensors in a raft
-                # are of the same type So we can just latch the type
-                # from the first sensor
+            if rsp_item['child_hardwareTypeName'] in ccd_types:
                 if sensor_type is None:
                     sensor_type = rsp_item['child_hardwareTypeName']
+                slot, c_esn = parse_etraveler_response(rsp_item, validate_dict)
+                manu_sn = connection.getManufacturerId(experimentSN=c_esn,
+                                                       htype=sensor_type)
+                sensor_dict[str(slot)] = Sensor(c_esn, raft_id, manu_sn)
 
         return Raft(raft_id, sensor_type, sensor_dict)
 

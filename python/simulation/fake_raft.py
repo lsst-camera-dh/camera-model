@@ -63,24 +63,37 @@ def sort_unique(filelist):
     return ret_list
 
 
-def make_outfile_path(**kwargs):
-    """ Build the path for an output file for a particular test on a particular sensor
-
-    This is only the last part of the path, the job harness will move the files to
-    <root_folder>/sraft<raft_id>/<process_name>/<job_id>
-
-    For the last part of the path, we use
-    <slot_name>/<file_string>  except that we replace the job_id in file_string with the
-    current job_id
+def make_outfile_path(outpath='.', slot_name=None, file_string=None,
+                      jobname=None):
     """
-    file_string = kwargs['file_string']
-    job_id = kwargs['job_id']
+    Build the staged output path for a file produced by a harnessed
+    job.  This means that the path will be relative to the cwd.  For
+    raft testing of sensors, the output file path will be of the form
+
+    ./<slot_name>/<file_name>
+
+    where file_name is the basename of file_string with the jobname
+    inserted before the timestamp, thereby making the job name part of
+    the original run number.
+
+    If slot_name is None, then the output file path is
+
+    ./<file_name>
+    """
+    if file_string is None:
+        raise RuntimeError("fake_raft.make_outfile_path: file_string must not be None")
+    if jobname is None:
+        raise RuntimeError("fake_raft.make_outfile_path: jobname must not be None")
     fname, ext = os.path.splitext(file_string)
     tokens = fname.split('_')
-    fname = fname.replace("%s"%tokens[-1], "%s"%job_id)
+    tokens.insert(-1, jobname)
+    fname = '_'.join(tokens)
     fname += ext
-    return os.path.join(kwargs.get('outpath', '.'),
-                        kwargs['slot_name'], fname)
+    if slot_name is not None:
+        outfile_path = os.path.join(outpath, slot_name, fname)
+    else:
+        outfile_path = os.path.join(outpath, fname)
+    return outfile_path
 
 
 def get_file_suffix(filepath):
@@ -570,7 +583,7 @@ class RaftImages(object):
         outfilename = make_outfile_path(outpath=self.output_path,
                                         slot_name=slot_name,
                                         file_string=basename,
-                                        job_id=job_id)
+                                        jobname=jobname)
         outdir = os.path.dirname(outfilename)
         try:
             os.makedirs(outdir)
