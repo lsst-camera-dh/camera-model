@@ -7,7 +7,7 @@ import yaml
 import eTraveler.clientAPI.connection
 import siteUtils
 
-__all__ = ['Raft', 'Sensor', 'ROOT_FOLDER']
+__all__ = ['Raft', 'Sensor', 'REB', 'ROOT_FOLDER']
 
 ROOT_FOLDER = os.environ.get('LCATR_DATACATALOG_FOLDER',
                              'LSST/mirror/SLAC-prod/prod')
@@ -95,6 +95,75 @@ class Sensor(object):
         return self._manufacturer_sn
 
 
+class REB(object):
+    '''
+    Class to contain information on a REB (raft electronics board)
+    that's been extracted from the eTraveler database tables.
+    '''
+    htype = 'LCA-13574'
+    def __init__(self, reb_id, manufacturer_sn, firmware_version):
+        '''
+        Parameters
+        ----------
+        reb_id : str
+            LSST ID number of the REB.
+        manufacturer_sn : str
+            Manufacturer's serial number.  This should be the hex
+            representation of the internal hardware id.
+        firmware_version : str
+            The firmware version that is supposed to be installed.
+        '''
+        self._reb_id = reb_id
+        self._manufacturer_sn = manufacturer_sn
+        self._firmware_version = firmware_version
+
+    @property
+    def reb_id(self):
+        return self._reb_id
+
+    @property
+    def manufacturer_sn(self):
+        return self._manufacturer_sn
+
+    @property
+    def firmware_version(self):
+        return self._firmware_version
+
+    @staticmethod
+    def get_rebs(raft_id, conn=None, htype='LCA-11021_RTM', db_name='Prod'):
+        """
+        Factory method for creating a dictionary of REB objects given
+        a raft_id.
+
+        Parameters
+        ----------
+        raft_id : str
+            The LSST ID of the raft.
+        conn : eTraveler.clientAPI.connection.Connection, optional
+            If None, then a connection object will be created.
+        htype : str, optional
+            LSST hardware type. Default: 'LCA-11021_RTM'
+        db_name : str, optional
+            eTraveler database to use.  Default: 'Prod'
+
+        Returns
+        -------
+        dict of REB objects keyed by slot name.
+        """
+        if conn is None:
+            conn = eTraveler.clientAPI.connection.Connection(USER, db_name)
+        resp = conn.getHardwareHierarchy(experimentSN=raft_id, htype=htype)
+        rebs = dict()
+        for item in resp:
+            if item['slotName'].startswith('REB'):
+                slot = item['slotName']
+                reb_id = item['child_experimentSN']
+                manufacturer_sn = conn.getManufacturerId(experimentSN=reb_id,
+                                                         htype=REB.htype)
+                firmware_version = None   # There is no interface to this yet.
+                rebs[slot] = REB(reb_id, manufacturer_sn, firmware_version)
+        return rebs
+
 class Raft(object):
     '''
     A simple class to carry around some information about a raft.
@@ -107,14 +176,17 @@ class Raft(object):
         Type of sensors in the raft, either 'e2v-CCD' or 'ITL-CCD'
     sensor_dict : dict
         Dictionary for slot to Sensor
+    rebs : dict
+        dict of REB objects keyed by slot name.
     '''
-    def __init__(self, raft_id, sensor_type, sensor_dict):
+    def __init__(self, raft_id, sensor_type, sensor_dict, rebs={}):
         """
         Class constructor.
         """
         self.__raft_id = raft_id
         self.__sensor_type = sensor_type
         self.__sensor_dict = sensor_dict
+        self._rebs = rebs
 
     @staticmethod
     def create_from_yaml(yamlfile):
@@ -159,7 +231,7 @@ class Raft(object):
         user = kwargs.get('user', USER)
         db_name = kwargs.get('db_name', None)
         prod_server = kwargs.get('prod_server', True)
-        htype = kwargs.get('htype', siteUtils.getUnitType())
+        htype = kwargs.get('htype', 'LCA-11021_RTM')
         no_batched = kwargs.get('no_batched', 'false')
         if db_name is None:
             db_name = os.path.split(os.environ['LCATR_LIMS_URL'])[-1]
@@ -212,7 +284,8 @@ class Raft(object):
                                                        htype=sensor_type)
                 sensor_dict[str(slot)] = Sensor(c_esn, raft_id, manu_sn)
 
-        return Raft(raft_id, sensor_type, sensor_dict)
+        rebs = REB.get_rebs(raft_id, conn=connection, htype=htype)
+        return Raft(raft_id, sensor_type, sensor_dict, rebs)
 
     @property
     def raft_id(self):
@@ -245,3 +318,6 @@ class Raft(object):
         """ Sensor associated with a particular slot """
         return self.__sensor_dict[slot]
 
+    @property
+    def rebs(self):
+        return self._rebs
