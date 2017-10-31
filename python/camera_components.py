@@ -237,7 +237,7 @@ class Raft(object):
             db_name = os.path.split(os.environ['LCATR_LIMS_URL'])[-1]
             if db_name not in 'Prod Dev Test Raw'.split():
                 # This case occurs when using the fake_eT server.
-                db_name = 'Dev'
+                db_name = os.environ.get('LCATR_ET_DB_NAME', 'Dev')
 
         my_conn = eTraveler.clientAPI.connection.Connection(user, db_name,
                                                             prod_server)
