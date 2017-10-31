@@ -125,6 +125,10 @@ class REB(object):
     def manufacturer_sn(self):
         return self._manufacturer_sn
 
+    @manufacturer_sn.setter
+    def manufacturer_sn(self, value):
+        self._manufacturer_sn = value
+
     @property
     def firmware_version(self):
         return self._firmware_version
