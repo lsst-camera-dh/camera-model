@@ -183,14 +183,16 @@ class Raft(object):
     rebs : dict
         dict of REB objects keyed by slot name.
     '''
-    def __init__(self, raft_id, sensor_type, sensor_dict, rebs={}):
+    def __init__(self, raft_id, sensor_type, sensor_dict, rebs=None):
         """
         Class constructor.
         """
         self.__raft_id = raft_id
         self.__sensor_type = sensor_type
         self.__sensor_dict = sensor_dict
-        self._rebs = rebs
+        self._rebs = dict()
+        if rebs is not None:
+            self._rebs = rebs
 
     @staticmethod
     def create_from_yaml(yamlfile):
