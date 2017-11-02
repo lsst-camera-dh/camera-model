@@ -100,7 +100,6 @@ class REB(object):
     Class to contain information on a REB (raft electronics board)
     that's been extracted from the eTraveler database tables.
     '''
-    htype = 'LCA-13574'
     def __init__(self, reb_id, manufacturer_sn, firmware_version):
         '''
         Parameters
@@ -162,8 +161,9 @@ class REB(object):
             if item['slotName'].startswith('REB'):
                 slot = item['slotName']
                 reb_id = item['child_experimentSN']
+                htype = item['child_hardwareTypeName']
                 manufacturer_sn = conn.getManufacturerId(experimentSN=reb_id,
-                                                         htype=REB.htype)
+                                                         htype=htype)
                 firmware_version = None   # There is no interface to this yet.
                 rebs[slot] = REB(reb_id, manufacturer_sn, firmware_version)
         return rebs
@@ -247,7 +247,8 @@ class Raft(object):
 
         my_conn = eTraveler.clientAPI.connection.Connection(user, db_name,
                                                             prod_server)
-        return Raft.create_from_connection(my_conn, raft_id, htype, no_batched)
+        return Raft.create_from_connection(my_conn, raft_id, htype,
+                                           no_batched=no_batched)
 
     @staticmethod
     def create_from_connection(connection, raft_id, htype,
