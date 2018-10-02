@@ -28,7 +28,7 @@ def make_output_topdir_path(**kwargs):
 def make_output_path(**kwargs):
     """ Build the output path for a particular set of data
     """
-    kwargs['ordinal_str'] = "%04i" % kwargs['ordinal']
+    kwargs['ordinal_str'] = "%06i" % kwargs['ordinal']
     return os.path.join(kwargs.get('root_folder_out', '.'),
                         kwargs['image_type'],
                         "MC_{date}_{ordinal_str}_R{raft_slot}S{sensor_slot}.fits".format(**kwargs))
