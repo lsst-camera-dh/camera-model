@@ -203,7 +203,7 @@ class Raft(object):
         sensors = input_dict['sensors']
         sensor_dict = {}
         for slot_name, sensor_name in sensors.items():
-            sensor_dict[slot_name] = Sensor(sensor_name, raft_id)
+            sensor_dict[slot_name] = Sensor(sensor_name, raft_id, None)
         return Raft(raft_id, sensor_type, sensor_dict)
 
     @staticmethod
