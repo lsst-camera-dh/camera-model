@@ -307,7 +307,7 @@ class Raft(object):
     @property
     def slot_names(self):
         """ The names of the 'slots' associated with the sensors """
-        slots = self.__sensor_dict.keys()
+        slots = list(self.__sensor_dict.keys())
         slots.sort()
         return slots
 
