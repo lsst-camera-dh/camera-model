@@ -56,7 +56,10 @@ def find_latest_acq_dir(**kwargs):
                          kwargs['acq_type_in'],
                          kwargs.get('jh_version', 'v0'),
                          kwargs.get('activity_id_in', '*'))
-    return sorted(glob.glob(xpath))[-1]
+    dirlist = sorted(glob.glob(xpath))
+    if len(dirlist) == 0:
+        return None
+    return dirlist[-1]
 
 
 def get_image_type_from_path(filepath):
@@ -107,6 +110,8 @@ def find_files_for_raft(**kwargs):
     """ Find the latest file for a particular acquistion type for a given raft.
     """
     acq_dir = find_latest_acq_dir(**kwargs)
+    if acq_dir is None:
+        return {}
     return get_files_for_raft(acq_dir)
 
 
