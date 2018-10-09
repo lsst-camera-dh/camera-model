@@ -121,7 +121,9 @@ def find_files_for_rafts(raft_map, **kwargs):
     raft_args = kwargs.copy()
     d_out = {}
     for k, v in raft_map.items():
-        raft_args.update(dict(raft_name=v))
+        raft_args.update(dict(raft_name=v['dev'],
+                              run_number_in=v.get('run_number', '*')))
+                              
         d_out[k] = find_files_for_raft(**raft_args)
     return d_out
 
