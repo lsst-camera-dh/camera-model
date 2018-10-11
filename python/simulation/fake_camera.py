@@ -263,7 +263,8 @@ def copy_files(image_map, **kwargs):
 def read_input_camera_yaml(yamlpath):
     """ Read the raft slot to sensor ID mapping from a yamlfile
     """
-    yaml_dict = yaml.load(open(yamlpath))
+    with open(yamlpath, 'r') as yaml_input:
+        yaml_dict = yaml.load(yaml_input)
     return yaml_dict
 
 
