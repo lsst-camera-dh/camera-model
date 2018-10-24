@@ -31,7 +31,7 @@ def make_output_path(**kwargs):
     kwargs['ordinal_str'] = "%06i" % kwargs['ordinal']
     return os.path.join(kwargs.get('root_folder_out', '.'),
                         kwargs['image_type'],
-                        "MC_{date}_{ordinal_str}_R{raft_slot}S{sensor_slot}.fits".format(**kwargs))
+                        "MC_{date}_{ordinal_str}_R{raft_slot}_S{sensor_slot}.fits".format(**kwargs))
 
 def find_latest_acq_dir(**kwargs):
     """ Find the directory corresponding to the lastest run with particular set of criteria.
