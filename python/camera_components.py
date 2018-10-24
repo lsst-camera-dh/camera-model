@@ -349,13 +349,10 @@ class CameraInfo:
             self.slot_names.add(slot)
         self.raft_names = sorted(list(self.raft_names))
         self.slot_names = sorted(list(self.slot_names))
-        # Remove "_" from detector names to match CCS naming convention
-        # for focalplane-level FITS files.
-        self.det_names = [x.replace('_', '') for x in self._det_names]
 
     def get_det_names(self):
         """Return a copy of the list of detector names."""
-        return copy.copy(self.det_names)
+        return copy.copy(self._det_names)
 
     def get_raft_names(self):
         """Return a copy of the list of raft names."""
