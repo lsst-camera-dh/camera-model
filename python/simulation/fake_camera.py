@@ -65,10 +65,13 @@ def find_latest_acq_dir(**kwargs):
 def get_image_type_from_path(filepath):
     """ Get the type of image file by parsing the input filepath
     """
-    tokens = os.path.basename(filepath).split('_')[1:-2]
+    runnum = os.path.dirname(filepath).split('/')[-5]
+    tokens = os.path.basename(filepath).split('_')[1:-1]
     s = ''
     first = True
     for token in tokens:
+        if token == runnum:
+            break
         if first:
             first = False
         else:
@@ -165,8 +168,15 @@ def make_output_files(image_dict, **kwargs):
     names for all the files in a series of multi-raft images.
     """
     image_map = {}
+    image_type_dict_yaml = kwargs.get('image_type_dict_yaml', None)
+    if image_type_dict_yaml is not None:
+        image_type_dict = yaml.load(open(image_type_dict_yaml))
+    else:
+        image_type_dict = {}
+
     for image_type, file_dict in sorted(image_dict.items()):
-        image_map[image_type] = make_output_files_for_image(file_dict, image_type, **kwargs)
+        mapped_image_type = image_type_dict.get(image_type, image_type)
+        image_map[mapped_image_type] = make_output_files_for_image(file_dict, mapped_image_type, **kwargs)
         kwargs['ordinal'] += 1
     return image_map
 
