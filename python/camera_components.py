@@ -336,7 +336,7 @@ class CameraInfo:
     available from the obs_lsst package.  For now, use hard-coded
     values for things like the generic detector and raft names.
     """
-    def __init__(self):
+    def __init__(self, user='ccs', db_name='Prod'):
         # Get the detector names from the obs_lsst package.
         self._det_names = [det.getName() for det
                            in PhosimMapper().camera]
@@ -349,6 +349,22 @@ class CameraInfo:
         self.raft_names = sorted(list(self.raft_names))
         self.slot_names = sorted(list(self.slot_names))
 
+        self._get_installed_locations(user, db_name)
+
+    def _get_installed_locations(self, user, db_name):
+        conn = eTraveler.clientAPI.connection.Connection(user, db_name)
+        cryostat_id = 'LCA-10134_Cryostat-0001'
+        htype = 'LCA-10134_Cryostat'
+        resp = conn.getHardwareHierarchy(experimentSN=cryostat_id, htype=htype)
+
+        self._science_rafts = []
+        self._corner_rafts = []
+        for item in resp:
+            if item['child_hardwareTypeName'] == 'LCA-11021_RTM':
+                self._science_rafts.append('R' + item['slotName'][-2:])
+            if item['child_hardwareTypeName'] == 'LCA-10692_CRTM':
+                self._corner_rafts.append('R' + item['slotName'][-2:])
+
     def get_det_names(self):
         """Return a copy of the list of detector names."""
         return copy.copy(self._det_names)
@@ -356,6 +372,42 @@ class CameraInfo:
     def get_raft_names(self):
         """Return a copy of the list of raft names."""
         return copy.copy(self.raft_names)
+
+    def get_installed_science_raft_names(self):
+        """Return a copy of the list of installed science raft names."""
+        return copy.copy(self._science_rafts)
+
+    def get_installed_corner_raft_names(self):
+        """Return a copy of the list of installed science raft names."""
+        return copy.copy(self._corner_rafts)
+
+    def get_installed_raft_names(self):
+        """Return a copy of the list of installed raft names."""
+        return copy.copy(self._science_rafts + self._corner_rafts)
+
+    def get_installed_det_names(self):
+        """Return the detector names based on the installed rafts."""
+        det_names = self.get_det_names()
+        raft_names = self.get_installed_raft_names()
+        return [_ for _ in det_names if _[:3] in raft_names]
+
+    def get_installed_det_names(self):
+        """Return the detector names based on the installed rafts."""
+        det_names = self.get_det_names()
+        raft_names = self.get_installed_raft_names()
+        return [_ for _ in det_names if _[:3] in raft_names]
+
+    def get_installed_science_raft_det_names(self):
+        """Return the detector names based on the installed rafts."""
+        det_names = self.get_det_names()
+        raft_names = self.get_installed_science_raft_names()
+        return [_ for _ in det_names if _[:3] in raft_names]
+
+    def get_installed_corner_raft_det_names(self):
+        """Return the detector names based on the installed rafts."""
+        det_names = self.get_det_names()
+        raft_names = self.get_installed_corner_raft_names()
+        return [_ for _ in det_names if _[:3] in raft_names]
 
     def get_slot_names(self):
         """Return a copy of the list of slot names."""
