@@ -382,14 +382,8 @@ class CameraInfo:
         return copy.copy(self._corner_rafts)
 
     def get_installed_raft_names(self):
-        """Return a copy of the list of installed raft names."""
-        return copy.copy(self._science_rafts + self._corner_rafts)
-
-    def get_installed_det_names(self):
-        """Return the detector names based on the installed rafts."""
-        det_names = self.get_det_names()
-        raft_names = self.get_installed_raft_names()
-        return [_ for _ in det_names if _[:3] in raft_names]
+        """Return the list of installed raft names."""
+        return self._science_rafts + self._corner_rafts
 
     def get_installed_det_names(self):
         """Return the detector names based on the installed rafts."""
