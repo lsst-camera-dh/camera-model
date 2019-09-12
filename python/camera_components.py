@@ -338,8 +338,8 @@ class CameraInfo:
     """
     def __init__(self, user='ccs', db_name='Prod'):
         # Get the detector names from the obs_lsst package.
-        self._det_names = [det.getName() for det
-                           in PhosimMapper().camera]
+        self.camera_object = PhosimMapper().camera
+        self._det_names = [det.getName() for det in self.camera_object]
         self.raft_names = set()
         self.slot_names = set()
         for det_name in self._det_names:
