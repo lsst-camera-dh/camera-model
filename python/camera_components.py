@@ -6,6 +6,7 @@ import os
 import copy
 import yaml
 import eTraveler.clientAPI.connection
+from lsst.obs.lsst.phosim import PhosimMapper
 
 __all__ = ['Raft', 'Sensor', 'REB', 'ROOT_FOLDER', 'camera_info']
 
@@ -335,12 +336,10 @@ class CameraInfo:
     available from the obs_lsst package.  For now, use hard-coded
     values for things like the generic detector and raft names.
     """
-    _det_names = ('R01_S00', 'R01_S01', 'R01_S02', 'R01_S10', 'R01_S11', 'R01_S12', 'R01_S20', 'R01_S21', 'R01_S22', 'R02_S00', 'R02_S01', 'R02_S02', 'R02_S10', 'R02_S11', 'R02_S12', 'R02_S20', 'R02_S21', 'R02_S22', 'R03_S00', 'R03_S01', 'R03_S02', 'R03_S10', 'R03_S11', 'R03_S12', 'R03_S20', 'R03_S21', 'R03_S22', 'R10_S00', 'R10_S01', 'R10_S02', 'R10_S10', 'R10_S11', 'R10_S12', 'R10_S20', 'R10_S21', 'R10_S22', 'R11_S00', 'R11_S01', 'R11_S02', 'R11_S10', 'R11_S11', 'R11_S12', 'R11_S20', 'R11_S21', 'R11_S22', 'R12_S00', 'R12_S01', 'R12_S02', 'R12_S10', 'R12_S11', 'R12_S12', 'R12_S20', 'R12_S21', 'R12_S22', 'R13_S00', 'R13_S01', 'R13_S02', 'R13_S10', 'R13_S11', 'R13_S12', 'R13_S20', 'R13_S21', 'R13_S22', 'R14_S00', 'R14_S01', 'R14_S02', 'R14_S10', 'R14_S11', 'R14_S12', 'R14_S20', 'R14_S21', 'R14_S22', 'R20_S00', 'R20_S01', 'R20_S02', 'R20_S10', 'R20_S11', 'R20_S12', 'R20_S20', 'R20_S21', 'R20_S22', 'R21_S00', 'R21_S01', 'R21_S02', 'R21_S10', 'R21_S11', 'R21_S12', 'R21_S20', 'R21_S21', 'R21_S22', 'R22_S00', 'R22_S01', 'R22_S02', 'R22_S10', 'R22_S11', 'R22_S12', 'R22_S20', 'R22_S21', 'R22_S22', 'R23_S00', 'R23_S01', 'R23_S02', 'R23_S10', 'R23_S11', 'R23_S12', 'R23_S20', 'R23_S21', 'R23_S22', 'R24_S00', 'R24_S01', 'R24_S02', 'R24_S10', 'R24_S11', 'R24_S12', 'R24_S20', 'R24_S21', 'R24_S22', 'R30_S00', 'R30_S01', 'R30_S02', 'R30_S10', 'R30_S11', 'R30_S12', 'R30_S20', 'R30_S21', 'R30_S22', 'R31_S00', 'R31_S01', 'R31_S02', 'R31_S10', 'R31_S11', 'R31_S12', 'R31_S20', 'R31_S21', 'R31_S22', 'R32_S00', 'R32_S01', 'R32_S02', 'R32_S10', 'R32_S11', 'R32_S12', 'R32_S20', 'R32_S21', 'R32_S22', 'R33_S00', 'R33_S01', 'R33_S02', 'R33_S10', 'R33_S11', 'R33_S12', 'R33_S20', 'R33_S21', 'R33_S22', 'R34_S00', 'R34_S01', 'R34_S02', 'R34_S10', 'R34_S11', 'R34_S12', 'R34_S20', 'R34_S21', 'R34_S22', 'R41_S00', 'R41_S01', 'R41_S02', 'R41_S10', 'R41_S11', 'R41_S12', 'R41_S20', 'R41_S21', 'R41_S22', 'R42_S00', 'R42_S01', 'R42_S02', 'R42_S10', 'R42_S11', 'R42_S12', 'R42_S20', 'R42_S21', 'R42_S22', 'R43_S00', 'R43_S01', 'R43_S02', 'R43_S10', 'R43_S11', 'R43_S12', 'R43_S20', 'R43_S21', 'R43_S22')
-    def __init__(self):
-#        # Get the detector names from the obs_lsst package.
-#        self._det_names = [det.getName() for det
-#                           in obs_lsst.LsstCamMapper().camera
-#                           if det.getType()==cameraGeom.SCIENCE]
+    def __init__(self, user='ccs', db_name='Prod'):
+        # Get the detector names from the obs_lsst package.
+        self.camera_object = PhosimMapper().camera
+        self._det_names = [det.getName() for det in self.camera_object]
         self.raft_names = set()
         self.slot_names = set()
         for det_name in self._det_names:
@@ -350,6 +349,22 @@ class CameraInfo:
         self.raft_names = sorted(list(self.raft_names))
         self.slot_names = sorted(list(self.slot_names))
 
+        self._get_installed_locations(user, db_name)
+
+    def _get_installed_locations(self, user, db_name):
+        conn = eTraveler.clientAPI.connection.Connection(user, db_name)
+        cryostat_id = 'LCA-10134_Cryostat-0001'
+        htype = 'LCA-10134_Cryostat'
+        resp = conn.getHardwareHierarchy(experimentSN=cryostat_id, htype=htype)
+
+        self._science_rafts = []
+        self._corner_rafts = []
+        for item in resp:
+            if item['child_hardwareTypeName'] == 'LCA-11021_RTM':
+                self._science_rafts.append('R' + item['slotName'][-2:])
+            if item['child_hardwareTypeName'] == 'LCA-10692_CRTM':
+                self._corner_rafts.append('R' + item['slotName'][-2:])
+
     def get_det_names(self):
         """Return a copy of the list of detector names."""
         return copy.copy(self._det_names)
@@ -357,6 +372,36 @@ class CameraInfo:
     def get_raft_names(self):
         """Return a copy of the list of raft names."""
         return copy.copy(self.raft_names)
+
+    def get_installed_science_raft_names(self):
+        """Return a copy of the list of installed science raft names."""
+        return copy.copy(self._science_rafts)
+
+    def get_installed_corner_raft_names(self):
+        """Return a copy of the list of installed science raft names."""
+        return copy.copy(self._corner_rafts)
+
+    def get_installed_raft_names(self):
+        """Return the list of installed raft names."""
+        return self._science_rafts + self._corner_rafts
+
+    def get_installed_det_names(self):
+        """Return the detector names based on the installed rafts."""
+        det_names = self.get_det_names()
+        raft_names = self.get_installed_raft_names()
+        return [_ for _ in det_names if _[:3] in raft_names]
+
+    def get_installed_science_raft_det_names(self):
+        """Return the detector names based on the installed rafts."""
+        det_names = self.get_det_names()
+        raft_names = self.get_installed_science_raft_names()
+        return [_ for _ in det_names if _[:3] in raft_names]
+
+    def get_installed_corner_raft_det_names(self):
+        """Return the detector names based on the installed rafts."""
+        det_names = self.get_det_names()
+        raft_names = self.get_installed_corner_raft_names()
+        return [_ for _ in det_names if _[:3] in raft_names]
 
     def get_slot_names(self):
         """Return a copy of the list of slot names."""
