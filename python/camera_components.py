@@ -4,6 +4,7 @@ Abstractions of rafts and sensors.
 from __future__ import print_function, absolute_import, division
 import os
 import copy
+import pickle
 import yaml
 import eTraveler.clientAPI.connection
 from lsst.obs.lsst.phosim import PhosimMapper
@@ -336,7 +337,8 @@ class CameraInfo:
     available from the obs_lsst package.  For now, use hard-coded
     values for things like the generic detector and raft names.
     """
-    def __init__(self, user='ccs', db_name='Prod'):
+    def __init__(self, user='ccs', db_name='Prod',
+                 hardware_info_file='lca-10134_cryostat-0001_hw_info.pkl'):
         # Get the detector names from the obs_lsst package.
         self.camera_object = PhosimMapper().camera
         self._det_names = [det.getName() for det in self.camera_object]
@@ -349,13 +351,20 @@ class CameraInfo:
         self.raft_names = sorted(list(self.raft_names))
         self.slot_names = sorted(list(self.slot_names))
 
-        self._get_installed_locations(user, db_name)
+        self._get_installed_locations(user, db_name, hardware_info_file)
 
-    def _get_installed_locations(self, user, db_name):
-        conn = eTraveler.clientAPI.connection.Connection(user, db_name)
-        cryostat_id = 'LCA-10134_Cryostat-0001'
-        htype = 'LCA-10134_Cryostat'
-        resp = conn.getHardwareHierarchy(experimentSN=cryostat_id, htype=htype)
+    def _get_installed_locations(self, user, db_name, hardware_info_file):
+        if os.path.isfile(hardware_info_file):
+            with open(hardware_info_file, 'rb') as fd:
+                resp = pickle.load(fd)
+        else:
+            conn = eTraveler.clientAPI.connection.Connection(user, db_name)
+            cryostat_id = 'LCA-10134_Cryostat-0001'
+            htype = 'LCA-10134_Cryostat'
+            resp = conn.getHardwareHierarchy(experimentSN=cryostat_id,
+                                             htype=htype)
+            with open(hardware_info_file, 'wb') as fd:
+                pickle.dump(resp, fd)
 
         self._science_rafts = []
         self._corner_rafts = []
