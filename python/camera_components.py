@@ -4,6 +4,7 @@ Abstractions of rafts and sensors.
 from __future__ import print_function, absolute_import, division
 import os
 import copy
+import pickle
 import yaml
 import eTraveler.clientAPI.connection
 from lsst.obs.lsst.phosim import PhosimMapper
@@ -336,7 +337,8 @@ class CameraInfo:
     available from the obs_lsst package.  For now, use hard-coded
     values for things like the generic detector and raft names.
     """
-    def __init__(self, user='ccs', db_name='Prod'):
+    def __init__(self, user='ccs', db_name='Prod',
+                 hardware_info_file='lca-10134_cryostat-0001_hw_info.pkl'):
         # Get the detector names from the obs_lsst package.
         self.camera_object = PhosimMapper().camera
         self._det_names = [det.getName() for det in self.camera_object]
@@ -349,13 +351,23 @@ class CameraInfo:
         self.raft_names = sorted(list(self.raft_names))
         self.slot_names = sorted(list(self.slot_names))
 
-        self._get_installed_locations(user, db_name)
+        self._science_rafts = None
+        self._corner_rafts = None
+        self._conn_args = user, db_name
+        self._hardware_info_file = hardware_info_file
 
-    def _get_installed_locations(self, user, db_name):
-        conn = eTraveler.clientAPI.connection.Connection(user, db_name)
-        cryostat_id = 'LCA-10134_Cryostat-0001'
-        htype = 'LCA-10134_Cryostat'
-        resp = conn.getHardwareHierarchy(experimentSN=cryostat_id, htype=htype)
+    def _get_installed_locations(self):
+        if os.path.isfile(self._hardware_info_file):
+            with open(self._hardware_info_file, 'rb') as fd:
+                resp = pickle.load(fd)
+        else:
+            conn = eTraveler.clientAPI.connection.Connection(*self._conn_args)
+            cryostat_id = 'LCA-10134_Cryostat-0001'
+            htype = 'LCA-10134_Cryostat'
+            resp = conn.getHardwareHierarchy(experimentSN=cryostat_id,
+                                             htype=htype)
+            with open(self._hardware_info_file, 'wb') as fd:
+                pickle.dump(resp, fd)
 
         self._science_rafts = []
         self._corner_rafts = []
@@ -373,17 +385,23 @@ class CameraInfo:
         """Return a copy of the list of raft names."""
         return copy.copy(self.raft_names)
 
-    def get_installed_science_raft_names(self):
-        """Return a copy of the list of installed science raft names."""
-        return copy.copy(self._science_rafts)
+    @property
+    def installed_science_rafts(self):
+        """A list of installed science rafts."""
+        if self._science_rafts is None:
+            self._get_installed_locations()
+        return self._science_rafts
 
-    def get_installed_corner_raft_names(self):
-        """Return a copy of the list of installed science raft names."""
-        return copy.copy(self._corner_rafts)
+    @property
+    def installed_corner_rafts(self):
+        """A list of installed corner rafts."""
+        if self._corner_rafts is None:
+            self._get_installed_locations()
+        return self._corner_rafts
 
     def get_installed_raft_names(self):
         """Return the list of installed raft names."""
-        return self._science_rafts + self._corner_rafts
+        return self.installed_science_rafts + self.installed_corner_rafts
 
     def get_installed_det_names(self):
         """Return the detector names based on the installed rafts."""
@@ -394,14 +412,12 @@ class CameraInfo:
     def get_installed_science_raft_det_names(self):
         """Return the detector names based on the installed rafts."""
         det_names = self.get_det_names()
-        raft_names = self.get_installed_science_raft_names()
-        return [_ for _ in det_names if _[:3] in raft_names]
+        return [_ for _ in det_names if _[:3] in self.installed_science_rafts]
 
     def get_installed_corner_raft_det_names(self):
         """Return the detector names based on the installed rafts."""
         det_names = self.get_det_names()
-        raft_names = self.get_installed_corner_raft_names()
-        return [_ for _ in det_names if _[:3] in raft_names]
+        return [_ for _ in det_names if _[:3] in self.installed_corner_rafts]
 
     def get_slot_names(self):
         """Return a copy of the list of slot names."""
