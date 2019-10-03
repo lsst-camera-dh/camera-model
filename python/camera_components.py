@@ -7,7 +7,7 @@ import copy
 import pickle
 import yaml
 import eTraveler.clientAPI.connection
-from lsst.obs.lsst.phosim import PhosimMapper
+from lsst.obs.lsst import LsstCamMapper
 
 __all__ = ['Raft', 'Sensor', 'REB', 'ROOT_FOLDER', 'camera_info']
 
@@ -340,7 +340,7 @@ class CameraInfo:
     def __init__(self, user='ccs', db_name='Prod',
                  hardware_info_file='lca-10134_cryostat-0001_hw_info.pkl'):
         # Get the detector names from the obs_lsst package.
-        self.camera_object = PhosimMapper().camera
+        self.camera_object = LsstCamMapper().camera
         self._det_names = [det.getName() for det in self.camera_object]
         self.raft_names = set()
         self.slot_names = set()
